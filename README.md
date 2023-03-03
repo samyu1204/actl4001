@@ -16,6 +16,9 @@ To simplify the model, we assume that inflation rates follow a normal distributi
 
 ## Data and Data Limitations
 
+Hazard Event Data:
+- 
+
 We understand that inaccurate or biased data could produce inconsistencies in our model. We will explore the data and check for inconsistencies or misrepresented data.
 
 ## Key Points
