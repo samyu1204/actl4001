@@ -65,9 +65,113 @@ accuracy(forecastMA)
 # Moving Average (IT WORKS)
 MA2 <- ma(eco_dem_data$Inflation, order = 5, centre = TRUE)
 MA2
-forecastMA2 <- forecast(MA2, h = 30)
+forecastMA2 <- forecast(MA2, h = 10)
 forecastMA2
 accuracy(forecastMA2)
+
+
+# Keven's Code:
+demodata <- read_excel("data/2023-student-research-eco-dem-data.xlsx", 2)
+
+#Projection of population for the next 10 years
+poptable <- demodata[c(9,8,7),]
+
+colnames(poptable) <- demodata[6,]
+
+#Changing columns to numeric
+poptable$'Region 1'<- as.numeric(poptable$'Region 1')
+poptable$'Region 2'<- as.numeric(poptable$'Region 2')
+poptable$'Region 3'<- as.numeric(poptable$'Region 3')
+poptable$'Region 4'<- as.numeric(poptable$'Region 4')
+poptable$'Region 5'<- as.numeric(poptable$'Region 5')
+poptable$'Region 6'<- as.numeric(poptable$'Region 6')
+
+#Average population growth rate over 2019-2021 period
+growth <- c(0,0,0,0,0,0)
+for (i in 2:7){
+  print(i)
+  ave <- mean(c(as.numeric(poptable[2,i]/poptable[1,i]),as.numeric(poptable[3,i]/poptable[2,i])))
+  print(ave)
+  growth[i-1] <- ave
+}
+
+#Projecting next 10 years using found growth rates
+popproj <- data.frame()
+
+#Region
+for (i in (1:6)){
+  #year 1 projection
+  popproj[1,i] <- poptable[3,i+1]*growth[i]
+  #year 2-10 projection
+  for (j in (2:10)){
+    popproj[j,i] <- popproj[j-1,i]*growth[i]
+  } 
+}
+
+#Property value distribution
+pvd <-demodata[c(37:49),]
+colnames(pvd) <- demodata[6,]
+pvd$'Region 1'<- as.numeric(pvd$'Region 1')
+pvd$'Region 2'<- as.numeric(pvd$'Region 2')
+pvd$'Region 3'<- as.numeric(pvd$'Region 3')
+pvd$'Region 4'<- as.numeric(pvd$'Region 4')
+pvd$'Region 5'<- as.numeric(pvd$'Region 5')
+pvd$'Region 6'<- as.numeric(pvd$'Region 6')
+
+#Replacing first column with average value
+firstcolumn <-c(25000,75000,125000,175000,225000,275000,350000,450000,625000,875000,1250000,1750000,2000000)
+pvd[,1] <- firstcolumn
+
+
+#Expected property value
+pvd1 <- data.frame()
+
+for (i in (1:6)){
+  for (j in (1:13)){
+    pvd1[j,i] <- pvd[j,1]*pvd[j,i+1] 
+  }
+}
+
+epv <- c()
+for (i in (1:6)){
+  epv[i] <- sum(pvd1[,i])  
+}
+
+#In order from lowest to highest expected property value: Region 4,5,6,3,2,1
+
+#Household goods value ranges from 5-10% of property value
+hhgoodsval <- epv*0.05
+
+
+#Accommodation costs
+#With the assumptions that accommodation is only sourced for 3 weeks after claim, and the found accommodation is based on property value to replicate "quality of life"
+weeka <- 3
+accomval <- epv*0.001*weeka
+#Modelling with inflation
+
+
+#Psychological impacts
+#With the assumption that psychological treatment is only sourced for 5 weeks after claim
+weekb <- 5
+psychoval <- epv*0.00075*weekb
+#Modelling with inflation
+
+
+#Combined insured amount (pre-inflation)
+insured <- hhgoodsval + accomval + psychoval
+
+#Combined insured amount (post-inflation) for the next 10 years
+#using a loop that creates 10 lines using insured + inflation
+
+#Probability of claims over the next 10 years
+
+
+#Claim cost prediction
+#post inflation x probability of claim
+
+
+#voluntary vs involuntary displacement
+# maybe additional expected cost for involuntary displacement
 
 # Add inflation to data:
 data <- left_join(data, eco_dem_data, by = "Year", multiple = "all")
