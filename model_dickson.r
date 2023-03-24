@@ -3,7 +3,6 @@ library(dplyr)
 library(xgboost)
 library(forecast)
 library(ROCR)
-library(vars)
 
 set.seed(123) # for reproducibility
 data <- read_excel("data/2023-student-research-hazard-event-data.xlsx")
@@ -23,7 +22,6 @@ colnames(data) <- c(
 data$hazard_event <- as.factor(data$hazard_event)
 # Convert into numbers
 data$hazard_event <- as.numeric(data$hazard_event)
-
 # Gamma cannot have zero value
 data[data == 0] <- 0.001
 
@@ -55,6 +53,14 @@ TS <- ts(eco_dem_data$Inflation, start = eco_dem_data$Year[1], frequency = 1)
 # AR <- arima(TS, order = c(1,0,0))
 # pred_AR <- predict(AR, n.ahead = 10)
 # pred_AR
+
+
+# Moving Average (Constant Prediction)
+MA <- ma(TS, order = 2, centre = TRUE)
+MA
+forecastMA <- forecast(MA, h = 10)
+forecastMA
+accuracy(forecastMA)
 
 # Moving Average (IT WORKS)
 MA2 <- ma(eco_dem_data$Inflation, order = 5, centre = TRUE)
@@ -154,17 +160,6 @@ psychoval <- epv*0.00075*weekb
 #Combined insured amount (pre-inflation)
 insured <- hhgoodsval + accomval + psychoval
 
-inflation <- as.vector(forecastMA2$mean) + 1
-
-postinsured <- data.frame()
-for(i in (1:6)){
-  postinsured[1, i] <- insured[i]
-  for(j in (2:10)){
-    postinsured[j, i] <- postinsured[j-1, i] * inflation[j]
-  }
-}
-
-
 #Combined insured amount (post-inflation) for the next 10 years
 #using a loop that creates 10 lines using insured + inflation
 
@@ -196,19 +191,17 @@ colnames(data) <- c(
 )
 
 
-# 
+# Sampling for GLM with gamma link:
 sample <- sample(c(TRUE, FALSE), nrow(data), replace=TRUE, prob=c(0.7,0.3))
 
 train <- data[sample, ]
 # train %>% count(region)
 
-x_train <- as.matrix(subset(train, select = -c(property_damage, hazard_event)))
+x_train <- as.matrix(subset(train, select = -c(property_damage)))
 y_train <- as.matrix(subset(train, select = c(property_damage)))
 
-y_train_binary <- ifelse(y_train == 0.001, 0, 1)
-
 test <- data[!sample, ]
-x_test <- as.matrix(subset(test, select = -c(property_damage, hazard_event)))
+x_test <- as.matrix(subset(test, select = -c(property_damage)))
 y_test <- as.matrix(subset(test, select = c(property_damage)))
 # test %>% count(region)
 
@@ -232,12 +225,12 @@ summary(xgb_model)
 y_pred <- predict(xgb_model, x_test)
 
 calc_mse <- function(predicted, actual) {
+  print(length(actual))
   return(sum((actual - predicted)^2) / length(actual))
 }
 
 # Max depth 3: 6.208e+16
 # Max depth 20: 5.765571e+16
-# New without hazards: 3084333201679640
 print(calc_mse(y_pred, y_test))
 
 # Graphs:
@@ -253,21 +246,132 @@ xgb.plot.importance(importance_matrix =
                       main = "Importance Feature")
 
 
-# Probability prediction
-xgb_classification_model <- xgb.XGBClassifier(
-  'max_depth': 7,
-  'n_estimators': 50,
-  'learning_rate': 0.5,
+
+
+########################## Testing 10 year basis model ######################### 
+data10 <- read_excel("data/hazard-frequency-model.xlsx", sheet = "Decade Data")
+colnames(data10) <- c("Decade", "YStart", "YEnd", "Region", "Invol_Disp", "Duration", "Fatalities", "Injuries", "property_damage")
+
+make_data_num <- function(data) {
+  data$Region <- as.numeric(data$Region)
+  data$Fatalities <- as.numeric(data$Fatalities)
+  data$Duration <- as.numeric(data$Duration)
+  data$Injuries <- as.numeric(data$Injuries)
+  data$property_damage <- as.numeric(data$property_damage)
+  data$Invol_Disp <- as.numeric(data$Invol_Disp)
+  
+  return(data)
+  
+}
+
+data10 <- make_data_num(data10)
+data10$Decade <- as.numeric(data10$Decade)
+
+data10[data10 == 0] <- 0.001
+
+# Sampling for GLM with gamma link:
+sample10 <- sample(c(TRUE, FALSE), nrow(data10), replace=TRUE, prob=c(0.7,0.3))
+
+train10 <- data10[sample10, ]
+# train %>% count(region)
+
+x_train10 <- as.matrix(subset(train10, select = -c(YStart, YEnd, property_damage)))
+y_train10 <- as.matrix(subset(train10, select = c(property_damage)))
+
+test10 <- data10[!sample10, ]
+x_test10 <- as.matrix(subset(test10, select = -c(YStart, YEnd, property_damage)))
+y_test10 <- as.matrix(subset(test10, select = c(property_damage)))
+# test %>% count(region)
+
+gamma_param <- list(
+  objective = "reg:gamma",
+  gamma = 1,
+  max_depth = 20,
+  eta = 0.5
 )
 
-xgb_model_prob <- xgboost(
-  data = x_train, label = y_train_binary, 
-  nrounds = 100, 
-  objective = "binary:logistic", 
-  eval_metric = "auc"
-  )
+xgb_model10 <- xgboost(
+  data = x_train10,
+  label = y_train10,
+  params = gamma_param,
+  nrounds = 100
+)
 
-y_pred_prob <- predict(xgb_model_prob, x_test)
+summary(xgb_model10)
+
+# make predictions on the test set
+y_pred10 <- predict(xgb_model10, x_test10)
+
+calc_mse <- function(predicted, actual) {
+  print(length(actual))
+  return(sum((actual - predicted)^2) / length(actual))
+}
+
+# Max depth 3: 6.208e+16
+# Max depth 20: 7.81e+15
+print(calc_mse(y_pred10, y_test10))
 
 
+################################################################################
+data_yearly <- read_excel("data/hazard-frequency-model.xlsx", sheet = "Yearly Data")
+colnames(data_yearly) <- c("Year","Region", "Invol_Disp", "Duration", "Fatalities", "Injuries", "property_damage")
+
+data_yearly <- make_data_num(data_yearly)
+data_yearly$Year <- as.numeric(data_yearly$Year)
+
+inv_region1 <- data_yearly %>% filter(Region == 1) %>% filter(Invol_Disp == 1)
+inv_region2 <- data_yearly %>% filter(Region == 2) %>% filter(Invol_Disp == 1)
+inv_region3 <- data_yearly %>% filter(Region == 3) %>% filter(Invol_Disp == 1)
+inv_region4 <- data_yearly %>% filter(Region == 4) %>% filter(Invol_Disp == 1)
+inv_region5 <- data_yearly %>% filter(Region == 5) %>% filter(Invol_Disp == 1)
+inv_region6 <- data_yearly %>% filter(Region == 6) %>% filter(Invol_Disp == 1)
+
+vol_region1 <- data_yearly %>% filter(Region == 1) %>% filter(Invol_Disp == 0)
+vol_region2 <- data_yearly %>% filter(Region == 2) %>% filter(Invol_Disp == 0)
+vol_region3 <- data_yearly %>% filter(Region == 3) %>% filter(Invol_Disp == 0)
+vol_region4 <- data_yearly %>% filter(Region == 4) %>% filter(Invol_Disp == 0)
+vol_region5 <- data_yearly %>% filter(Region == 5) %>% filter(Invol_Disp == 0)
+vol_region6 <- data_yearly %>% filter(Region == 6) %>% filter(Invol_Disp == 0)
+
+
+projections <- function(in_data, start) {
+  # Projections 
+  
+  proj <- ts(in_data, start , frequency = 1)
+  
+  # Moving Average (Constant Prediction)
+  proj_ma <- ma(proj, order = 2, centre = TRUE)
+  print(proj_ma)
+  proj_forecast <- forecast(proj_ma, h = 10)
+  print(proj_forecast)
+  accuracy(proj_forecast)
+  
+  # Moving Average (IT WORKS)
+  proj_ma2 <- ma(proj, order = 5, centre = TRUE)
+  print(proj_ma2)
+  proj_forecast2 <- forecast(proj_ma2, h = 10)
+  print(proj_forecast2)
+  accuracy(proj_forecast2)
+}
+
+projections(inv_region1$Fatalities, inv_region1$Year[1])
+
+# Projections for Fatalities
+
+inv_region1_proj <- projections(inv_region1$Fatalities, inv_region1$Year[1])
+inv_region2_proj <- projections(inv_region2$Fatalities, inv_region1$Year[1])
+inv_region3_proj <- projections(inv_region3$Fatalities, inv_region1$Year[1])
+inv_region4_proj <- projections(inv_region4$Fatalities, inv_region1$Year[1])
+inv_region5_proj <- projections(inv_region5$Fatalities, inv_region1$Year[1])
+inv_region6_proj <- projections(inv_region6$Fatalities, inv_region1$Year[1])
+
+vol_region1_proj <- projections(vol_region1$Fatalities, vol_region1$Year[1])
+vol_region2_proj <- projections(vol_region2$Fatalities, vol_region1$Year[1])
+vol_region3_proj <- projections(vol_region3$Fatalities, vol_region1$Year[1])
+vol_region4_proj <- projections(vol_region4$Fatalities, vol_region1$Year[1])
+vol_region5_proj <- projections(vol_region5$Fatalities, vol_region1$Year[1])
+vol_region6_proj <- projections(vol_region6$Fatalities, vol_region1$Year[1])
+
+
+# Can be replicated for other factors ##########################################
 
