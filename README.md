@@ -73,6 +73,8 @@ Also the model’s feature importance table is shown below (impact of each featu
 
 Running the model - get a really high mse due to the variability of the hazard event and claim magnitude, thus the high mse is reasonable for our case as claim amounts fluctuate between high numbers.
 
+### Pricing
+
 Pricing consists of a multitude of steps with a time horizon of 10 years.
 - We first projected the population per region using a mean growth rate calculated from the years 2019-21.
 - Next step was to find the mean value for a property within regions 1-6 using the property value distribution data provided.
