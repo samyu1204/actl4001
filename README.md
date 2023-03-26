@@ -57,4 +57,96 @@ In the event of a claim, the following is under coverage from this program:
 To price and find the cost of our program, we first look to model the probability of a claim as well as the amount claimed using historical hazard data given. Due to the high variability of the historical data and hazard event, we have decided to use a gradient boosting model, XGBoost with a gamma regression objective link. 
 
 We split the historical data into 70% training data and 30% testing data, and created the XGBoost model and predicted results using the testing data. The results of the predicted and actual density of results are presented below:
+<p align="center">
+<img src="https://user-images.githubusercontent.com/87253028/227770798-9bfa73e1-37f7-4f93-bc4a-5e2d8646ed36.png"> 
+</p>
+
+The XGBoost model is a good fit when predicting for the likelihood for a claim, as the predicted and actual curves are very close to one another. 
+
+Also the model’s feature importance table is shown below (impact of each feature on the predicted result):
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/87253028/227771015-c7c4a3e2-e8f3-466b-8e16-83b2c41321f1.png"> 
+</p>
+
+### Test Mean-Squared Error
+
+Running the model - get a really high mse due to the variability of the hazard event and claim magnitude, thus the high mse is reasonable for our case as claim amounts fluctuate between high numbers.
+
+Pricing consists of a multitude of steps with a time horizon of 10 years.
+- We first projected the population per region using a mean growth rate calculated from the years 2019-21.
+- Next step was to find the mean value for a property within regions 1-6 using the property value distribution data provided.
+  * Regions: (1) 359827.5 (2) 313217.5 (3) 302862.5 (4) 187360.0 (5) 206862.5 (6) 247597.5
+- To find the total expected insured amount, we must consider the value of household goods, accommodation costs and psychological costs as per program criteria.
+  * Household goods values are approximated at 5% of expected property value.
+  * Accommodation is approximated at 0.1% of expected property value and is expected to last 3 weeks.
+  * Psychological is approximated at 0.075% of expected property value and is expected to last 5 weeks.
+- Summing these variables up gives us a pre-inflation, expected number for insured amount per individual.
+  * Insured per individual per region: (1) 20420.21 (2) 17775.09 (3) 17187.45 (4) 10632.68 (5) 11739.45 (6) 14051.16
+
+## Assumptions
+| Variable | Assumption |
+| --- | ----------- | 
+|Inflation | A moving average of order 5 was used to forecast inflation.|
+|Involuntary Displacement |If property damage is greater than 500000, then it is considered to be involuntary displacement.|
+|Voluntary Displacement |If property damage is greater than the median house price in the respective region, then it is considered to be voluntary displacement.|
+|Population|Mean growth rate from the years 2019-2021 is used to explain and project future population trends.|
+|Property value|Distribution consisted of categories/brackets for property values. An average of the category’s bounds were taken to result in a singular number to be used in expected value calculation.|
+|Household goods value| Predicted to be 5% of property value.|
+|Accommodation value|Accommodation for individuals making claims is provided. The value is based on property value to replicate quality of life, resulting in 0.1% of property value. Provided accommodation is expected to last 3 weeks.|
+|Psychological impacts|Expected to last 5 weeks, and reflected as 0.075% of expected property value.|
+|Hazard event|Hazard events occur uniformly through each region, affecting the whole region, not partially.|
+|Exchange rate|US$ to Ꝕ is 1.321 (1 US$ = 1.321Ꝕ).|
+
+## Risk Mitigation Considerations
+
+The design of this social insurance program to cover the country of Storslysia from climate-related catastrophes due to the prevalence of climate change comes along with risks. In the sections below, quantitative and qualitative risks will be listed out, along with strategies and risk mitigation tactics. 
+
+### Quantitative Risks
+|Risk Category|Risk|Mitigation|
+|:----|:----|:----|
+|Financial|Pricing and insured amount of each individual. This includes cost of relocation, compensation due to displacement, and ongoing support for individuals post displacement and relocation. |Solvency & Coverage of all catastrophes|
+|Actuarial|Inaccurate estimation regarding likelihood of catastrophic events, in which displacement and relocation is needed afterwards. |Frequency projection model of minor, medium and major events per year is used (based on historical data). This is used to determine the probability and likelihood of these climate and hazard events. |
+|Actuarial |Inaccurate estimation for severity of catastrophic events.|Risk amplification factor is used to determine the change in atmosphere CO2. Allows for increased occurrence of climate change to be included in predictions. |
+
+### Qualitative Risks
+|Risk Category	|Risk|	Mitigation|
+|:----|:----|:----|
+|Social	|The potential for social unrest due to tensions from displacement of communities.| Alertness and campaigns can be raised to mitigate such social risks to bring light for the importance and benefits for this social insurance program. |
+|Psychological | Trauma stress and mental health issues led from displacement and relocation for the community.|	An approximation for financial needs regarding psychological impacts have been made. It is approximated at 0.075% of the expected property value for each individual and insured sum is expected to be use to treat trauma stress and mental health problems for the following 5 weeks post relocation and displacement. |
+|Political|	Potential backlash criticism from political standpoint causing lack of support and underfunding for this program.|Non-financial matters including political support is managed by another task force, and financial funding is managed under the Chief Actuary of Storslysia’s insurance regulator. |
+
+## Data and Data Limitation
+
+### Hazard data
+Hazard data shows historical hazard events and reflects the region the event takes place, duration, fatalities and its property damage.
+The limitations of hazard event data:
+- Limited location, as the data splits the country into six regions we are not able to accurately map the hazard event to a specific place, as we have to assume the whole region would experience the disaster.
+- Limited variables, the data provided does not give us the full image of the disaster as it lacks important features like economic impact, psychological impact etc to allow us to have a full understanding of the impact of these hazard events.
+- The data is limited to only providing us with the hazard event, and no contextual information about the event. Hence, there are inconsistencies in the data where for the same region and same hazard event we might observe very different property damage, which can hinder the training of our machine learning model.
+
+### Economic and demographic (ED) data
+ED data comprises various features based on region. Our program considers the following features:  
+- Census as of July 1 for the years 2019-21,
+- GDP for the years 2019-20,
+- Person per household for 2016-20,
+- Temporary housing cost with disaster (per person per month), and
+- Property value distribution data.
+
+### The limitations of ED data:
+- Census data only available for the years 2019-2021. This presents difficulty in projecting trends in population growth over the next few years as there are limited data points. Impossible to discover if changes in population follow a trend or are one-off occurrences.
+- Property value distribution data provides categorical values. In addition, the bracket values are inconsistent for each category. This presents the issue of how accurate we can predict the expected property value per region as assumptions will be needed.
+
+
+### Inflation and interest (II) data
+The limitations of II data:
+- There was a lack of historical data that explained the inflation variable, and thus a less accurate but more simple approach of forecasting was considered. 
+- In 2003, inflation was recorded at -990%.
+- The outlier in 2003 was not included in the moving average when forecasting inflation. A simple moving average of order 5 was used to simplify inflation forecasting. The government overnight bank lending rate, 1-year and 10-year risk free rates were not used in the projection of inflation as they are not good predictors of inflation. 
+- Missing data entry for government overnight bank lending rate in 1987.
+- Missing data entry for 1-year risk rate in 2018.
+
+
+
+
 
