@@ -61,9 +61,9 @@ We split the historical data into 70% training data and 30% testing data, and cr
 <img src="https://user-images.githubusercontent.com/87253028/227770798-9bfa73e1-37f7-4f93-bc4a-5e2d8646ed36.png"> 
 </p>
 
-The XGBoost model is a good fit when predicting for the likelihood for a claim, as the predicted and actual curves are very close to one another. 
+The XGBoost model is a good fit when predicting the likelihood for a claim, as the predicted and actual curves are relatively close to one another.
 
-Also the model’s feature importance table is shown below (impact of each feature on the predicted result):
+Also the summary of model features are presented to the right, showing the significance of each feature to the model.
 
 <p align="center">
 <img src="https://user-images.githubusercontent.com/87253028/227771015-c7c4a3e2-e8f3-466b-8e16-83b2c41321f1.png"> 
@@ -73,18 +73,50 @@ Also the model’s feature importance table is shown below (impact of each featu
 
 Running the model - get a really high mse due to the variability of the hazard event and claim magnitude, thus the high mse is reasonable for our case as claim amounts fluctuate between high numbers.
 
-### Pricing
+### Results of XGBoost Model (with projected data)
 
-Pricing consists of a multitude of steps with a time horizon of 10 years.
-- We first projected the population per region using a mean growth rate calculated from the years 2019-21.
-- Next step was to find the mean value for a property within regions 1-6 using the property value distribution data provided.
-  * Regions: (1) 359827.5 (2) 313217.5 (3) 302862.5 (4) 187360.0 (5) 206862.5 (6) 247597.5
-- To find the total expected insured amount, we must consider the value of household goods, accommodation costs and psychological costs as per program criteria.
-  * Household goods values are approximated at 5% of expected property value.
-  * Accommodation is approximated at 0.1% of expected property value and is expected to last 3 weeks.
-  * Psychological is approximated at 0.075% of expected property value and is expected to last 5 weeks.
-- Summing these variables up gives us a pre-inflation, expected number for insured amount per individual.
-  * Insured per individual per region: (1) 20420.21 (2) 17775.09 (3) 17187.45 (4) 10632.68 (5) 11739.45 (6) 14051.16
+#### Test Mean-Squared Error
+The MSE that the model produced for the test dataset came in at around twenty million, which gave more consistent and accurate results after hyper-tuning the parameters of our XGBoosting model using a grid search. Given the high variability of the hazard and claims (fluctuating in the millions) the test MSE for the model is acceptable.
+
+#### Modeling Relocation
+For the modeling of relocation we made multiple assumptions (Appendix A) regarding voluntary and involuntary relocation between the regions. We ranked regions based on their risk exposure, coming to the conclusion that regions 2 and 5 are more prone to catastrophic events in comparison to the rest. 
+
+To determine the probability of which individuals relocate, we used available information (hazard rate, population density, risk exposure and housing costs coupled with our stated assumptions) to create two transition matrices for voluntary and involuntary relocations (Appendix B).
+
+Using the transition matrices and projecting its respective transition probabilities on the  population data multiplied by the expected relocation, we can determine the population of each region on a year to year basis. To generate the 10 year projection, we ran our projection function 10 times using the previous years data to obtain the new set of population.
+
+## Pricing/Program Cost
+
+We priced the cost on a 10 year time horizon. Our costs include the average claims cost per year and the relocation costs, both voluntary and involuntary, that are covered under our program. 
+The average claims cost is calculated using 
+$$Claims Cost = Severity * Frequency$$
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/87253028/227992094-4f5e69b3-107a-4f95-83ea-159278d0dcdf.png"> 
+</p>
+
+The graph above shows the claims cost for property damage in the six different regions. It can be observed that region two has the most claims for property damage, while the rest of the regions are similar.
+
+Relocation costs will be considered through the population movement between each region. Using the median transportation and relocation costs given in the ED data, we are able to calculate the involuntary and voluntary displacement costs to a high degree of certainty. By taking a weighted average of the displacement costs we are able to come up with the expected relocation expense that would be paid per year. 
+
+The total price of the program will therefore be the average claims cost per year plus the relocation costs. In order to maintain the total costs to remain under 10% of the projected GDP, we adjust the percent covered in each of the relocation schemes. We also aim to monitor the pricing to ensure that this goal is achieved.
+
+Under current models we have projected to cover 5% of involuntary displacements and a 10% coverage of the difference in geographic risk from relocation for voluntary relocation.
+
+We then projected the population per region using a mean growth rate calculated from the years 2019-21. The next step was to find the mean value for a property within each of the regions using the property value distribution data provided, and the results are as follows:
+- Regions: (1) 359827.5 (2) 313217.5 (3) 302862.5 (4) 187360.0 (5) 206862.5 (6) 247597.5
+
+To find the total expected insured amount, we must consider the value of household goods, accommodation costs, psychological costs and relocation costs as per program criteria.
+
+- Household goods values are approximated at 5% of expected property value.
+- Accommodation is approximated at 0.1% of expected property value and is expected to last 3 weeks.
+- Psychological is approximated at 0.075% of expected property value and is expected to last 5 weeks.
+
+Summing these variables up gives us a pre-inflation, expected number for insured amount per individual which we used to cross check our claim cost model.
+
+- Insured per individual per region: (1) 20420.21 (2) 17775.09 (3) 17187.45 (4) 10632.68 (5) 11739.45 (6) 14051.16
+
+Refer to appendix 3.1 for post adjusted inflation values.
 
 ## Assumptions
 | Variable | Assumption |
