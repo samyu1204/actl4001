@@ -116,7 +116,7 @@ The design of this social insurance program to cover the country of Storslysia f
 |:----|:----|:----|
 |Social	|The potential for social unrest due to tensions from displacement of communities.| Alertness and campaigns can be raised to mitigate such social risks to bring light for the importance and benefits for this social insurance program. |
 |Psychological | Trauma stress and mental health issues led from displacement and relocation for the community.|	An approximation for financial needs regarding psychological impacts have been made. It is approximated at 0.075% of the expected property value for each individual and insured sum is expected to be use to treat trauma stress and mental health problems for the following 5 weeks post relocation and displacement. |
-|Political|	Potential backlash criticism from political standpoint causing lack of support and underfunding for this program.|Non-financial matters including political support is managed by another task force, and financial funding is managed under the Chief Actuary of Storslysia’s insurance regulator. |
+|Political|	Potential backlash criticism from political standpoint causing lack of support and underfunding for this program.|Non-financial matters including political support is managed by another task force, and financial funding is managed under the Chief Actuary of Storslysia’s insurance regulator.|
 
 <p align="center">
 <img src="https://user-images.githubusercontent.com/87253028/227772527-ecdbbd90-5eb2-4927-85f5-a3c7c0e1997b.png"> 
